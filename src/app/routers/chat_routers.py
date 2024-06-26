@@ -1,18 +1,15 @@
+from typing import List
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse, Response
-from typing import List
-
 from ..models.chat_models import ChatMessage, ChatRequest, ChatResponse, ChatRole
 from ..services.chat_services import ChatService
-
-
-DEFAULT_MEDIA_TYPE = "application/json"
 
 
 def validate_messages(messages: List[ChatMessage]) -> None:
     """
     Valida uma lista de mensagens. Cada mensagem deve ter um 'content' e um 'role'.
-    'role' deve ser 'system', 'user' ou 'assistant'. Lança uma exceção HTTPException para mensagens inválidas.
+    'role' deve ser 'system', 'user' ou 'assistant'.
+    Lança uma exceção HTTPException para mensagens inválidas.
     """
 
     if not messages:
@@ -73,7 +70,8 @@ ChatRouter = APIRouter(
 async def create_chat_response(request: ChatRequest) -> Response:
     """
     Este endpoint fornece uma interação de chat com base na solicitação de chat fornecida.
-    Retorna a resposta como StreamingResponse ou JSONResponse, com base no atributo stream da solicitação.
+    Retorna a resposta como StreamingResponse ou JSONResponse,
+    com base no atributo stream da solicitação.
     """
 
     validate_messages(request.messages)
@@ -91,13 +89,11 @@ async def create_chat_response(request: ChatRequest) -> Response:
     if request.stream:
         return StreamingResponse(
             response_generator(),
-            media_type=DEFAULT_MEDIA_TYPE,
             status_code=status.HTTP_200_OK,
         )
 
     return JSONResponse(
         chat_response.dict(),
-        media_type=DEFAULT_MEDIA_TYPE,
         status_code=status.HTTP_200_OK,
     )
 
@@ -114,7 +110,8 @@ async def create_chat_response(request: ChatRequest) -> Response:
 async def create_chat_completion(request: ChatRequest) -> Response:
     """
     Este endpoint fornece uma conclusão de chat com base na solicitação de chat fornecida.
-    Retorna a resposta como StreamingResponse ou JSONResponse, com base no atributo stream da solicitação.
+    Retorna a resposta como StreamingResponse ou JSONResponse,
+    com base no atributo stream da solicitação.
     """
 
     validate_messages(request.messages)
@@ -132,12 +129,10 @@ async def create_chat_completion(request: ChatRequest) -> Response:
     if request.stream:
         return StreamingResponse(
             response_generator(),
-            media_type=DEFAULT_MEDIA_TYPE,
             status_code=status.HTTP_200_OK,
         )
 
     return JSONResponse(
         chat_response.dict(),
-        media_type=DEFAULT_MEDIA_TYPE,
         status_code=status.HTTP_200_OK,
     )

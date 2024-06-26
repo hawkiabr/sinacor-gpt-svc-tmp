@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from .routers import chat_routers, health_routers
 
 fastapi_app = FastAPI()  # FastAPI app
