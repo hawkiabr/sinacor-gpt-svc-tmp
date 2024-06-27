@@ -65,7 +65,6 @@ ChatRouter = APIRouter(
     response_description="A interação de chat gerada",
     response_model=ChatResponse,
     summary="Obtém uma interação de chat.",
-    tags=["chat"],
 )
 async def create_chat_response(request: ChatRequest) -> Response:
     """
@@ -105,7 +104,6 @@ async def create_chat_response(request: ChatRequest) -> Response:
     response_description="A conclusão de chat gerada",
     response_model=ChatResponse,
     summary="Obtém uma conclusão de chat.",
-    tags=["chat"],
 )
 async def create_chat_completion(request: ChatRequest) -> Response:
     """
