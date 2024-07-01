@@ -1,3 +1,7 @@
+"""
+Este módulo define roteadores FastAPI para health checks.
+"""
+
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from ..models.health_models import HealthCheckResponse

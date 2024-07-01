@@ -1,3 +1,7 @@
+"""
+Este módulo define roteadores FastAPI para a criação de embeddings.
+"""
+
 from typing import Union
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -58,7 +62,4 @@ async def create_embeddings(request: EmbeddingRequest) -> EmbeddingResponse:
     embedding_service = EmbeddingService()
     embedding_response = embedding_service.create_embeddings(request.input)
 
-    return JSONResponse(
-        embedding_response.dict(), 
-        status_code=status.HTTP_201_CREATED
-    )
+    return JSONResponse(embedding_response.dict(), status_code=status.HTTP_201_CREATED)

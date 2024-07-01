@@ -1,3 +1,7 @@
+"""
+Este módulo define roteadores FastAPI para interações e conclusões de chat.
+"""
+
 from typing import List
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse, Response
