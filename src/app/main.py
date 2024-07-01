@@ -40,6 +40,20 @@ def create_openapi(app: FastAPI) -> Dict[str, Any]:
             "uma representação vetorial (embeddings) de uma determinada entrada que pode "
             "ser consumida por modelos ChatGPT do Azure OpenAI, utilizando dados sobre o Sinacor."
         ),
+        tags=[
+            {
+                "name": "chat",
+                "description": "Operações relacionadas a interações e conclusões de chat."
+            },
+            {
+                "name": "embeddings",
+                "description": "Operações relacionadas a criação de embeddings."
+            },
+            {
+                "name": "health",
+                "description": "Operações relacionadas a health checks."
+            },
+        ]
     )
 
     openapi_schema["info"]["x-logo"] = {
