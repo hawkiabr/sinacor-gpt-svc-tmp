@@ -4,6 +4,7 @@ Este módulo define a aplicação FastAPI, inclui os roteadores necessários e c
 """
 
 from typing import Any, Dict
+from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from .routers import chat_routers, embedding_routers, health_routers
@@ -16,7 +17,9 @@ def create_app():
 
     app = FastAPI()  # FastAPI app
     app.include_router(chat_routers.ChatRouter, prefix="/api", tags=["chat"])
-    app.include_router(embedding_routers.EmbeddingRouter, prefix="/api", tags=["embeddings"])
+    app.include_router(
+        embedding_routers.EmbeddingRouter, prefix="/api", tags=["embeddings"]
+    )
     app.include_router(health_routers.HealthRouter, tags=["health"])
     app.openapi = lambda: create_openapi(app)
     return app
@@ -43,17 +46,17 @@ def create_openapi(app: FastAPI) -> Dict[str, Any]:
         tags=[
             {
                 "name": "chat",
-                "description": "Operações relacionadas a interações e conclusões de chat."
+                "description": "Operações relacionadas a interações e conclusões de chat.",
             },
             {
                 "name": "embeddings",
-                "description": "Operações relacionadas a criação de embeddings."
+                "description": "Operações relacionadas a criação de embeddings.",
             },
             {
                 "name": "health",
-                "description": "Operações relacionadas a health checks."
+                "description": "Operações relacionadas a health checks.",
             },
-        ]
+        ],
     )
 
     openapi_schema["info"]["x-logo"] = {
@@ -64,4 +67,5 @@ def create_openapi(app: FastAPI) -> Dict[str, Any]:
     return app.openapi_schema
 
 
+load_dotenv(find_dotenv())
 fastapi_app = create_app()
