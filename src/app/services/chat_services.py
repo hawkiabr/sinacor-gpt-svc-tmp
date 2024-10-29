@@ -1,17 +1,23 @@
 import os
 import time
-from typing import List
+from typing import List, Optional
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from dotenv import find_dotenv, load_dotenv
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_community.vectorstores.azuresearch import AzureSearch
-from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.chat_history import (
+    BaseChatMessageHistory,
+    InMemoryChatMessageHistory,
+)
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompt_values import ChatPromptValue
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
+    MessagesPlaceholder,
 )
+
 from ..models.chat_models import (
     ChatChoice,
     ChatMessage,
@@ -54,12 +60,17 @@ class ChatService:
     Mantenha um tom impessoal, educado e profissional em todas as respostas, priorizando a clareza para auxiliar no atendimento ao chamado/ticket de suporte.
 """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        message_history: Optional[BaseChatMessageHistory] = None,
+    ) -> None:
         """
         Inicializa o serviço de chat.
         """
 
         load_dotenv(find_dotenv())
+
+        self._message_history = message_history
         self._init_env_vars()
         self._validate_env_vars()
         self._init_clients()
@@ -174,8 +185,22 @@ class ChatService:
         """
 
         context = self._retrieve_search_context(messages)
-        prompt = self._create_prompt(context, messages)
-        completion = self._invoke_openai_model(prompt)
+        prompt = self._create_prompt(context)
+
+        chain = prompt | self._openai_client
+
+        history = []
+        completion = chain.invoke(
+            {"chat_history": history, "user_message": messages[-1].content}
+        )
+
+        if self._message_history:
+            self._message_history.add_messages(
+                [
+                    HumanMessage(content=messages[-1].content),
+                    AIMessage(content=completion.content),
+                ]
+            )
 
         chat_completion = ChatResponse(
             choices=[
@@ -216,6 +241,7 @@ class ChatService:
             results = self._search_client.search(
                 search_text=message.content, top=self._azure_search_top_results
             )
+
             for doc in results:
                 search_context += "\n" + doc["content"]
                 if "sourcepage" in doc:
@@ -258,27 +284,28 @@ class ChatService:
     def _create_prompt(
         self,
         context: str,
-        messages: List[ChatMessage],
         system_message: SystemMessage = None,
-    ) -> ChatPromptValue:
+    ) -> ChatPromptTemplate:
         """
         Cria o prompt com base nas mensagens (perguntas).
 
         Args:
             context (str): O contexto a ser injetado no prompt.
-            messages (List[ChatMessage]): A lista de mensagens do chat.
             system_message (SystemMessage, optional): A mensagem de sistema. Padrão é None.
 
         Returns:
-            ChatPromptValue: O prompt criado com as mensagens e o contexto.
+            ChatPromptTemplate: O template de prompt.
         """
 
         if system_message is None:
             system_message = self._create_system_message(context)
 
-        user_message = HumanMessagePromptTemplate.from_template(messages[-1].content)
         prompt_template = ChatPromptTemplate.from_messages(
-            [system_message, user_message]
+            [
+                system_message,
+                MessagesPlaceholder("chat_history", optional=True),
+                ("human", "{user_message}"),
+            ]
         )
 
-        return prompt_template.invoke({"context": context})
+        return prompt_template

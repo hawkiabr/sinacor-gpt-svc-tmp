@@ -35,7 +35,7 @@ def create_openapi(app: FastAPI) -> Dict[str, Any]:
 
     openapi_schema = get_openapi(
         title="SinacorGPT | REST API",
-        version="v1.0.0",
+        version="v1.0.1",
         routes=app.routes,
         summary="Referência da API REST do SinacorGPT",
         description=(
