@@ -5,7 +5,7 @@ Este módulo define roteadores FastAPI para interações e conclusões de chat.
 from typing import List
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse, Response
-from ..models.chat_models import ChatMessage, ChatRequest, ChatResponse, ChatRole
+from ..models.chat_models import ChatCompletionRequest, ChatCompletionResponse, ChatMessage, ChatRequest, ChatResponse, ChatRole
 from ..services.chat_services import ChatService
 
 
@@ -138,3 +138,60 @@ async def create_chat_completion(request: ChatRequest) -> Response:
         chat_response.dict(),
         status_code=status.HTTP_200_OK,
     )
+
+
+from fastapi import FastAPI, Request, HTTPException, Header
+from uuid import UUID
+from typing import Optional
+
+app = FastAPI()
+
+@app.post("/chat/completions", response_model=ChatCompletionResponse)
+async def create_chat_completion(
+    request: ChatCompletionRequest,
+    user_id: Optional[str] = Header(None)
+):
+    """
+    Este endpoint fornece uma conclusão de chat com base na solicitação de chat fornecida.
+    """
+    
+    # O backend agora extrai o 'user-id' diretamente da requisição
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="O cabeçalho 'user-id' é obrigatório.")
+    
+    # Validação dos dados de mensagens
+    messages = request.data.messages
+    if not messages:
+        raise HTTPException(status_code=400, detail="A solicitação precisa conter mensagens.")
+
+    # Processamento do serviço de completions
+    chat_service = ChatService()
+    chat_response = chat_service.get_chat_completion(messages)
+
+    # Resposta normal ou como streaming, dependendo da requisição
+    if request.data.params.streamIndicator:
+        return StreamingResponse(
+            chat_service.get_chat_streaming_response(),
+            status_code=200
+        )
+    else:
+        return ChatCompletionResponse(
+            data={
+                "details": {
+                    "id": chat_response.idCompletion,
+                    "object": "completion",
+                    "created": chat_response.createdDateTime,
+                    "finishReason": chat_response.finishReason,
+                    "usage": {
+                        "completion_tokens": chat_response.usage.completionTokenCount,
+                        "prompt_tokens": chat_response.usage.promptTokenCount,
+                        "total_tokens": chat_response.usage.totalTokenCount,
+                    }
+                },
+                "message": {
+                    "role": chat_response.choices[0].message.roleName,
+                    "content": chat_response.choices[0].message.messageContent,
+                    "endTurn": True  # Ou ajustado conforme necessário
+                }
+            }
+        )

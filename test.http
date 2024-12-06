@@ -1,0 +1,33 @@
+POST /chat/completions
+Headers:
+  userId: "1cd209e3-056c-4cd3-bb5f-6c7a32e38f7b"
+
+Request Body:
+{
+  "data": {
+    "params": {
+      "stream": false,
+      "userId": "1cd209e3-056c-4cd3-bb5f-6c7a32e38f7b"
+    },
+    "messages": [
+      {
+        "role": "user",
+        "content": "O que é o Sinacor?"
+      }
+    ]
+  }
+}
+
+Response (429 - Too Many Requests):
+{
+  "errors": [
+    {
+      "code": "TOO_MANY_REQUESTS",
+      "title": "Limite de requisições excedido",
+      "detail": "Você fez muitas requisições em um curto espaço de tempo. Tente novamente mais tarde."
+    }
+  ]
+}
+
+Headers:
+  Retry-After: 60

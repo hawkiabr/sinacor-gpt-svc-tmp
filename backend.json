@@ -1,0 +1,524 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "SinacorGPT | REST API",
+        "summary": "Referência da API REST do SinacorGPT",
+        "description": "Crie interações, conclusões para mensagens de chat ou obtenha uma representação vetorial (embeddings) de uma determinada entrada que pode ser consumida por modelos ChatGPT do Azure OpenAI, utilizando dados sobre o Sinacor.",
+        "version": "v1.0.1",
+        "x-logo": {
+            "url": "https://www.hawkia.com.br/assets/images/hwk-img-logo-horizontal-neg-escuro.svg"
+        }
+    },
+    "paths": {
+        "/api/chat": {
+            "post": {
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Obtém uma interação de chat.",
+                "description": "Este endpoint fornece uma interação de chat com base na solicitação de chat fornecida.",
+                "operationId": "create_chat_response",
+                "parameters": [
+                    {
+                        "name": "user-id",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "title": "User-Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "A interação de chat gerada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChatResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/chat/completion": {
+            "post": {
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Obtém uma conclusão de chat.",
+                "description": "Este endpoint fornece uma conclusão de chat com base na solicitação de chat fornecida.",
+                "operationId": "create_chat_completion",
+                "parameters": [
+                    {
+                        "name": "user-id",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "title": "User-Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "A conclusão de chat gerada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChatResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/embeddings": {
+            "post": {
+                "tags": [
+                    "embeddings"
+                ],
+                "summary": "Cria embeddings para a entrada fornecida.",
+                "description": "Este endpoint fornece embeddings para a entrada fornecida.",
+                "operationId": "create_embeddings",
+                "parameters": [
+                    {
+                        "name": "user-id",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "title": "User-Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmbeddingRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Os embeddings gerados",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmbeddingResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "tags": [
+                    "health",
+                    "health"
+                ],
+                "summary": "Verifica a saúde do serviço.",
+                "description": "Este endpoint verifica a saúde do serviço.",
+                "operationId": "get_health_check",
+                "responses": {
+                    "200": {
+                        "description": "O status de saúde do serviço",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthCheckResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ChatChoice": {
+                "properties": {
+                    "finish_reason": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Finish Reason"
+                    },
+                    "index": {
+                        "type": "integer",
+                        "title": "Index"
+                    },
+                    "message": {
+                        "$ref": "#/components/schemas/ChatMessage"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "index",
+                    "message"
+                ],
+                "title": "ChatChoice",
+                "description": "Modelo para representar uma escolha de chat."
+            },
+            "ChatMessage": {
+                "properties": {
+                    "content": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Content"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/ChatRole"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "role"
+                ],
+                "title": "ChatMessage",
+                "description": "Modelo para representar uma mensagem de chat."
+            },
+            "ChatRequest": {
+                "properties": {
+                    "messages": {
+                        "items": {
+                            "$ref": "#/components/schemas/ChatMessage"
+                        },
+                        "type": "array",
+                        "title": "Messages"
+                    },
+                    "stream": {
+                        "type": "boolean",
+                        "title": "Stream",
+                        "default": false
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "messages"
+                ],
+                "title": "ChatRequest",
+                "description": "Modelo para representar uma solicitação de chat."
+            },
+            "ChatResponse": {
+                "properties": {
+                    "choices": {
+                        "items": {
+                            "$ref": "#/components/schemas/ChatChoice"
+                        },
+                        "type": "array",
+                        "title": "Choices"
+                    },
+                    "created": {
+                        "type": "integer",
+                        "title": "Created"
+                    },
+                    "id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Id"
+                    },
+                    "usage": {
+                        "$ref": "#/components/schemas/ChatUsage"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "choices",
+                    "created",
+                    "usage"
+                ],
+                "title": "ChatResponse",
+                "description": "Modelo para representar uma resposta de chat."
+            },
+            "ChatRole": {
+                "type": "string",
+                "enum": [
+                    "user",
+                    "assistant",
+                    "system"
+                ],
+                "title": "ChatRole",
+                "description": "Enum para representar o papel de uma mensagem de chat."
+            },
+            "ChatUsage": {
+                "properties": {
+                    "completion_tokens": {
+                        "type": "integer",
+                        "title": "Completion Tokens"
+                    },
+                    "prompt_tokens": {
+                        "type": "integer",
+                        "title": "Prompt Tokens"
+                    },
+                    "total_tokens": {
+                        "type": "integer",
+                        "title": "Total Tokens"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "completion_tokens",
+                    "prompt_tokens",
+                    "total_tokens"
+                ],
+                "title": "ChatUsage",
+                "description": "Modelo para representar o uso de tokens de chat."
+            },
+            "EmbeddingRequest": {
+                "properties": {
+                    "input": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            }
+                        ],
+                        "title": "Input"
+                    },
+                    "encoding_format": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Encoding Format",
+                        "default": "float"
+                    },
+                    "dimensions": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Dimensions"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "input"
+                ],
+                "title": "EmbeddingRequest",
+                "description": "Modelo para representar uma solicitação de embeddings."
+            },
+            "EmbeddingResponse": {
+                "properties": {
+                    "embeddings": {
+                        "items": {
+                            "type": "number"
+                        },
+                        "type": "array",
+                        "title": "Embeddings"
+                    },
+                    "total_tokens": {
+                        "type": "integer",
+                        "title": "Total Tokens"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "embeddings",
+                    "total_tokens"
+                ],
+                "title": "EmbeddingResponse",
+                "description": "Modelo para representar uma resposta de embeddings."
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "HealthCheckResponse": {
+                "properties": {
+                    "service_status": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Service Status"
+                    },
+                    "dependencies_status": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Dependencies Status"
+                    },
+                    "app_version": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "App Version"
+                    }
+                },
+                "type": "object",
+                "title": "HealthCheckResponse",
+                "description": "Modelo para a resposta do health check."
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "chat",
+            "description": "Operações relacionadas a interações e conclusões de chat."
+        },
+        {
+            "name": "embeddings",
+            "description": "Operações relacionadas a criação de embeddings."
+        },
+        {
+            "name": "health",
+            "description": "Operações relacionadas a health checks."
+        }
+    ]
+}

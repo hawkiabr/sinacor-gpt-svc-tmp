@@ -1,0 +1,507 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Chat Service API",
+    "description": "Serviço de IA Generativa do SINACOR.",
+    "version": "1.0.0-rc1"
+  },
+  "servers": [
+    {
+      "url": "https://Caminho_backend/api/chat-services/v1"
+    }
+  ],
+    "tags": [
+    {
+      "name": "Completions"
+    },
+  ],
+  "paths": {
+    "/chat/completions": {
+      "post": {
+        "summary": "Cria uma conclusão para mensagens de bate-papo.",
+        "description": "Usado para criar conclusões para mensagens de bate-papo.",
+        "operationId": "chatCompletions_Create",
+        "parameters": [
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "Versão da API.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Versão da API.",
+              "example": "2023-11-01T00:00:00.000Z"
+            }
+          },
+          {
+            "name": "user-id",
+            "in": "header",
+            "description": "Um identificador exclusivo que representa o usuário.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID.",
+              "example": "1cd209e3-056c-4cd3-bb5f-6c7a32e38f7b"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chatCompletionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "apim-request-id": {
+                "description": "Request ID para fins de resolução de problemas.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "user-id": {
+                "description": "Um identificador exclusivo que representa o usuário.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chatCompletionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição Inválida",
+            "headers": {
+              "apim-request-id": {
+                "description": "Request ID para fins de resolução de problemas.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "user-id": {
+                "description": "Um identificador exclusivo que representa o usuário.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "string",
+                    "message": "string",
+                    "param": "string",
+                    "type": "string",
+                    "inner_error": {
+                      "code": "ResponsibleAIPolicyViolation",
+                      "content_filter_results": {
+                        "sexual": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "violence": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "hate": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "self_harm": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "error": {
+                          "code": "string",
+                          "message": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Serviço Indisponível",
+            "headers": {
+              "apim-request-id": {
+                "description": "Request ID para fins de resolução de problemas.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "string",
+                    "message": "string",
+                    "param": "string",
+                    "type": "string",
+                    "inner_error": {
+                      "code": "ResponsibleAIPolicyViolation",
+                      "content_filter_results": {
+                        "sexual": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "violence": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "hate": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "self_harm": {
+                          "severity": "safe",
+                          "filtered": true
+                        },
+                        "error": {
+                          "code": "string",
+                          "message": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "errorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/error"
+          }
+        }
+      },
+      "error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "contentFilterResult": {
+        "required": [
+          "severity",
+          "filtered"
+        ],
+        "type": "object",
+        "properties": {
+          "severity": {
+            "enum": [
+              "safe",
+              "low",
+              "medium",
+              "high"
+            ],
+            "type": "string",
+            "x-ms-enum": {
+              "name": "ContentFilterSeverity",
+              "modelAsString": true,
+              "values": [
+                {
+                  "value": "safe",
+                  "description": "Conteúdo geral ou relacionado em contextos genéricos ou não perigosos."
+                },
+                {
+                  "value": "low",
+                  "description": "Conteúdo perigoso de baixa intensidade e nível de risco."
+                },
+                {
+                  "value": "medium",
+                  "description": "Conteúdo perigoso de média intensidade e nível de risco."
+                },
+                {
+                  "value": "high",
+                  "description": "Conteúdo perigoso de alta intensidade e nível de risco."
+                }
+              ]
+            }
+          },
+          "filtered": {
+            "type": "boolean"
+          }
+        }
+      },
+      "contentFilterResults": {
+        "type": "object",
+        "properties": {
+          "sexual": {
+            "$ref": "#/components/schemas/contentFilterResult"
+          },
+          "violence": {
+            "$ref": "#/components/schemas/contentFilterResult"
+          },
+          "hate": {
+            "$ref": "#/components/schemas/contentFilterResult"
+          },
+          "self_harm": {
+            "$ref": "#/components/schemas/contentFilterResult"
+          },
+          "error": {
+            "$ref": "#/components/schemas/error"
+          }
+        },
+        "description": "Informações sobre a categoria de filtragem de conteúdo (ódio, sexual, violência, auto-mutilação), caso tenha sido detectado, bem como o nível de gravidade (baixo, médio, alto que determina a intensidade e o nível de risco do conteúdo) e se foi filtrado ou não."
+      },
+      "promptFilterResult": {
+        "type": "object",
+        "properties": {
+          "prompt_index": {
+            "type": "integer"
+          },
+          "content_filter_results": {
+            "$ref": "#/components/schemas/contentFilterResults"
+          }
+        },
+        "description": "Resultados da filtragem de conteúdo para um único prompt na requisição."
+      },
+      "promptFilterResults": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/promptFilterResult"
+        },
+        "description": "A filtragem de conteúdo resulta em zero ou mais prompts na requisição. Em uma requisição de streaming, os resultados de diferentes prompts podem chegar em momentos ou ordens diferentes."
+      },
+      "chatCompletionsRequestCommon": {
+        "type": "object",
+        "properties": {
+          "stream": {
+            "type": "boolean",
+            "description": "Se definido, trechos parciais de mensagens serão enviados, como no ChatGPT. Os tokens serão enviados como eventos de dados enviados à medida que estiverem disponíveis, com o fluxo encerrado por uma mensagem `data: [DONE]`.",
+            "default": false
+          },
+          "user": {
+            "type": "string",
+            "description": "Um identificador exclusivo que representa o seu usuário final, que pode ajudar a monitorar e detetar abusos.",
+            "example": [
+              "user-e49c7a5b"
+            ]
+          }
+        }
+      },
+      "chatCompletionsRequest": {
+        "required": [
+          "messages"
+        ],
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/chatCompletionsRequestCommon"
+          },
+          {
+            "properties": {
+              "messages": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/message"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Uma requisição para conclusão de bate-papo.",
+        "example": [
+          {
+            "messages": [
+              {
+                "role": "user",
+                "content": "Qual query valida o cadastro do relacionamento da Atividade Bovespa com Atividade Custódia?"
+              }
+            ]
+          }
+        ]
+      },
+      "message": {
+        "required": [
+          "role",
+          "content"
+        ],
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "O índice da mensagem na conversa."
+          },
+          "role": {
+            "enum": [
+              "system",
+              "user",
+              "assistant",
+              "tool"
+            ],
+            "type": "string",
+            "description": "O papel do autor desta mensagem."
+          },
+          "content": {
+            "type": "string",
+            "description": "O conteúdo da mensagem."
+          },
+          "end_turn": {
+            "type": "boolean",
+            "description": "Se a mensagem termina o turno de bate-papo."
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "messages": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/message"
+                },
+                "description": "Mensagens trocadas entre o serviço e usuário antes da mensagem final do serviço."
+              }
+            },
+            "description": "O contexto da conversa."
+          }
+        },
+        "description": "Uma mensagem de bate-papo."
+      },
+      "chatCompletionsResponseCommon": {
+        "required": [
+          "id",
+          "object",
+          "created"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer",
+            "format": "unixtime"
+          }
+        }
+      },
+      "chatCompletionChoiceCommon": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "finish_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "chatCompletionChoice": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/chatCompletionChoiceCommon"
+          },
+          {
+            "properties": {
+              "message": {
+                "$ref": "#/components/schemas/message"
+              }
+            }
+          }
+        ]
+      },
+      "chatCompletionsResponse": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/chatCompletionsResponseCommon"
+          },
+          {
+            "properties": {
+              "choices": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/chatCompletionChoice"
+                }
+              }
+            }
+          }
+        ],
+        "description": "A resposta com as conclusões para mensagens de bate-papo.",
+        "example": [
+          {
+            "id": "1",
+            "object": "service.chat.completion",
+            "created": 1700592309,
+            "choices": [
+              {
+                "index": 0,
+                "finish_reason": "stop",
+                "message": {
+                  "role": "assistant",
+                  "content": "A query que valida o cadastro do relacionamento da Atividade Bovespa com Atividade Custódia é a seguinte:\n\n```\nselect cd_cliente_dest\nfrom tscrelacatvd\nwhere cd_cliente_ori = 'código contas'\nand cd_sistema_ori = 'BOL'\nand cd_sistema_dest = 'CF';\n```\n\nNessa query, substitua 'código contas' pelo código da conta que você deseja validar.",
+                  "end_turn": true,
+                  "context": {
+                    "messages": [
+                      {
+                        "role": "tool",
+                        "content": "{\"citations\":[{\"filepath\":\"Abertura do módulo GA.pdf\",\"content\":\"Content of the citation 1\"}]\"}",
+                        "end_turn": false
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "apiKeyHeader": {
+        "type": "apiKey",
+        "name": "Ocp-Apim-Subscription-Key",
+        "in": "header"
+      },
+      "apiKeyQuery": {
+        "type": "apiKey",
+        "name": "subscription-key",
+        "in": "query"
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKeyHeader": []
+    },
+    {
+      "apiKeyQuery": []
+    }
+  ]
+}

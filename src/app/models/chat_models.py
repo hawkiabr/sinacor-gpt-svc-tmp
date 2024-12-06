@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatRole(str, Enum):
@@ -60,3 +60,61 @@ class ChatRequest(BaseModel):
 
     messages: List[ChatMessage]
     stream: bool = False
+
+
+class Message(BaseModel):
+    roleName: str = Field(
+        ..., max_length=9, description="O papel do autor da mensagem."
+    )
+    messageContent: str = Field(
+        ..., max_length=8000, description="Conteúdo da mensagem."
+    )
+    endTurnIndicator: Optional[bool] = Field(
+        None, description="Indica se a mensagem termina o turno de bate-papo."
+    )
+
+
+class ChatCompletionRequestCommon(BaseModel):
+    streamIndicator: bool = Field(
+        default=False,
+        description="Se verdadeiro, o fluxo de tokens será enviado à medida que estiverem disponíveis.",
+    )
+    userId: UUID = Field(..., description="Identificador do usuário")
+
+
+class DataChatCompletionRequest(BaseModel):
+    params: ChatCompletionRequestCommon
+    messages: List[Message]
+
+
+class ChatCompletionRequest(BaseModel):
+    data: DataChatCompletionRequest
+
+
+class ChatCompletionChoiceCommon(BaseModel):
+    indexOption: int
+    finishReason: Optional[str] = Field(
+        None, description="Razão do término da resposta."
+    )
+
+
+class ChatCompletionChoice(BaseModel):
+    chatCompletionChoiceCommon: ChatCompletionChoiceCommon
+    message: Message
+
+
+class Usage(BaseModel):
+    completionTokenCount: int
+    promptTokenCount: int
+    totalTokenCount: int
+
+
+class ChatCompletionResponseCommon(BaseModel):
+    idCompletion: str
+    objectType: str
+    createdDateTime: int
+    usage: Usage
+
+
+class ChatCompletionResponse(BaseModel):
+    data: dict

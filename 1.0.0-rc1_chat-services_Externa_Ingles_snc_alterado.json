@@ -1,0 +1,326 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Chat Service API",
+    "description": "Serviço de IA Generativa do SINACOR.",
+    "version": "1.0.0-rc1"
+  },
+  "servers": [
+    {
+      "url": "https://Caminho_backend/api/chat-services/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Completions"
+    }
+  ],
+  "paths": {
+    "/chat/completions": {
+      "post": {
+        "tags": [
+          "Completions"
+        ],
+        "summary": "Cria uma conclusão para mensagens de bate-papo.",
+        "description": "Usado para criar conclusões para mensagens de bate-papo.",
+        "operationId": "chatCompletions_Create",
+        "parameters": [
+          {
+            "name": "apiVersion",
+            "in": "query",
+            "description": "Versão da API.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Versão da API.",
+              "example": "2023-11-01T00:00:00.000Z"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "header",
+            "description": "Um identificador exclusivo que representa o usuário.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "User ID.",
+              "example": "1cd209e3-056c-4cd3-bb5f-6c7a32e38f7b"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "headers": {
+              "x-v": {
+                "description": "Versão da API. Ex: 1.0.0-rc1",
+                "schema": {
+                  "maxLength": 20,
+                  "minLength": 9,
+                  "type": "string"
+                }
+              },
+              "apimRequestId": {
+                "description": "Request ID para fins de resolução de problemas.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "userId": {
+                "description": "Um identificador exclusivo que representa o usuário.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errors"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "errors": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error": {
+        "required": [
+          "code",
+          "detail",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "maxLength": 10,
+            "type": "string",
+            "description": "Código do erro de negócio."
+          },
+          "title": {
+            "maxLength": 100,
+            "type": "string",
+            "description": "Mensagem sucinta do erro de negócio."
+          },
+          "detail": {
+            "maxLength": 2000,
+            "type": "string",
+            "description": "Informações complementares a respeito do erro de negócio."
+          }
+        }
+      },
+      "ChatCompletionsRequestCommon": {
+        "type": "object",
+        "properties": {
+          "streamIndicator": {
+            "type": "boolean",
+            "description": "Se definido, trechos parciais de mensagens serão enviados, como no ChatGPT. Os tokens serão enviados como eventos de dados enviados à medida que estiverem disponíveis, com o fluxo encerrado por uma mensagem `data: [DONE]`.",
+            "default": false
+          },
+          "userIdFinal": {
+            "description": "Um identificador exclusivo que representa o seu usuário final, que pode ajudar a monitorar e detetar abusos.",
+            "type": "string",
+            "maxLength": 13,
+            "example": "user-e49c7a5b"
+          }
+        }
+      },
+      "ChatCompletionsRequest": {
+        "required": [
+          "data"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataChatCompletionsRequest"
+          }
+        }
+      },
+      "DataChatCompletionsRequest": {
+        "required": [
+          "messages"
+        ],
+        "type": "object",
+        "properties": {
+          "chatCompletionsReqCommon": {
+            "$ref": "#/components/schemas/ChatCompletionsRequestCommon"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        }
+      },
+      "Message": {
+        "required": [
+          "messageRoleName",
+          "messageContentDescription"
+        ],
+        "type": "object",
+        "properties": {
+          "messageIndex": {
+            "type": "integer",
+            "format": "int16",
+            "maximum": 32767,
+            "minimum": 1,
+            "description": "O índice da mensagem na conversa."
+          },
+          "messageRoleName": {
+            "type": "string",
+            "maxLength": 9,
+            "description": "O papel do autor desta mensagem.",
+            "enum": [
+              "system",
+              "user",
+              "assistant",
+              "tool"
+            ]
+          },
+          "messageContentDescription": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "O conteúdo da mensagem."
+          },
+          "endTurnIndicator": {
+            "type": "boolean",
+            "description": "Se a mensagem termina o turno de bate-papo."
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          }
+        }
+      },
+      "ChatCompletionsResponseCommon": {
+        "required": [
+          "id",
+          "object",
+          "created"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer",
+            "format": "unixtime"
+          }
+        }
+      },
+      "ChatCompletionChoiceCommon": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "finish_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ChatCompletionChoice": {
+        "required": [
+          "chatCompletionChoiceCommon",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "chatCompletionChoiceCommon": {
+            "$ref": "#/components/schemas/ChatCompletionChoiceCommon"
+          },
+          "message": {
+            "$ref": "#/components/schemas/Message"
+          }
+        }
+      },
+      "ChatCompletionsResponse": {
+        "required": [
+          "data"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataChatCompletionsResponse"
+          }
+        }
+      },
+      "DataChatCompletionsResponse": {
+        "type": "object",
+        "properties": {
+          "chatCompletionsRspCommon": {
+            "$ref": "#/components/schemas/ChatCompletionsResponseCommon"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatCompletionChoice"
+            }
+          }
+        }
+      }
+    }
+  }
+}
