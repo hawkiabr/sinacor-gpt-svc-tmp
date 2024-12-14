@@ -1,0 +1,76 @@
+<!--
+    - Policies are applied in the order they appear.
+    - Position <base/> inside a section to inherit policies from the outer scope.
+    - Comments within policies are not preserved.
+-->
+<!-- Add policies as children to the <inbound>, <outbound>, <backend>, and <on-error> elements -->
+<policies>
+    <!-- Throttle, authorize, validate, cache, or transform the requests -->
+    <inbound>
+        <base />
+        <!-- Define o backend da requisição -->
+        <set-backend-service base-url="https://azr-asp-dados-dm-test-n.azurewebsites.net" />
+        <!-- Reescreve a URL para o endpoint específico da Azure Function -->
+        <rewrite-uri template="/api/chat/completion" />
+        <!-- Define ou sobrescreve o cabeçalho 'user-id' -->
+        <set-header name="user-id" exists-action="override">
+            <value>@(context.Request.Headers.GetValueOrDefault("user-id", "andre@hawkia.com.br"))</value>
+        </set-header>
+        <!-- Define o cabeçalho 'Content-Type' para garantir que o backend receba 'application/json' -->
+        <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+        </set-header>
+        <!-- Transforma o corpo da requisição para o formato esperado pela Azure Function -->
+        <set-body>@{
+                // Corpo original como um JObject
+                var requestBody = context.Request.Body.As<JObject>(preserveContent: true);
+                
+                // Cria o novo corpo com a estrutura correta
+                var transformedBody = new JObject(
+                    new JProperty("messages", requestBody["data"]["messages"]),
+                    new JProperty("stream", requestBody["data"]["params"]["stream"])
+                );
+                
+                return transformedBody.ToString();
+            }</set-body>
+    </inbound>
+    <!-- Control if and how the requests are forwarded to services  -->
+    <backend>
+        <base />
+    </backend>
+    <!-- Customize the responses -->
+    <outbound>
+        <base />
+        <!-- Reformatar a resposta para incluir o campo 'usage' dentro de 'details' -->
+        <set-body>@{
+                var response = context.Response.Body.As<JObject>();
+                var newResponse = new JObject();
+                
+                // Adicionar os dados da resposta original ao novo objeto
+                newResponse["data"] = new JObject();
+                newResponse["data"]["details"] = new JObject();
+                newResponse["data"]["details"]["id"] = response["id"];
+                newResponse["data"]["details"]["object"] = "completion";
+                newResponse["data"]["details"]["created"] = response["created"];
+                newResponse["data"]["details"]["finishReason"] = response["choices"][0]["finish_reason"];
+                
+                // Adicionar o campo 'usage' dentro de 'details'
+                newResponse["data"]["details"]["usage"] = new JObject();
+                newResponse["data"]["details"]["usage"]["completion_tokens"] = response["usage"]["completion_tokens"];
+                newResponse["data"]["details"]["usage"]["prompt_tokens"] = response["usage"]["prompt_tokens"];
+                newResponse["data"]["details"]["usage"]["total_tokens"] = response["usage"]["total_tokens"];
+                
+                // Adicionar a mensagem
+                newResponse["data"]["message"] = new JObject();
+                newResponse["data"]["message"]["role"] = response["choices"][0]["message"]["role"];
+                newResponse["data"]["message"]["content"] = response["choices"][0]["message"]["content"];
+                newResponse["data"]["message"]["endTurn"] = true; // ou outro valor dependendo da lógica
+                
+                return newResponse.ToString();
+            }</set-body>
+    </outbound>
+    <!-- Handle exceptions and customize error responses  -->
+    <on-error>
+        <base />
+    </on-error>
+</policies>

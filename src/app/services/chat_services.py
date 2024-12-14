@@ -20,10 +20,17 @@ from langchain_core.prompts import (
 
 from ..models.chat_models import (
     ChatChoice,
+    ApiChatMessage,
+    ApiChatUsage,
+    ChatCompletionChoice,
+    ChatCompletionChoiceCommon,
+    ChatCompletionResponse,
+    ChatCompletionResponseCommon,
     ChatMessage,
     ChatResponse,
     ChatRole,
     ChatUsage,
+    DataChatCompletionResponse,
 )
 from ..models.search_models import SearchStrategy
 
@@ -207,7 +214,7 @@ class ChatService:
                 ChatChoice(
                     finish_reason=completion.response_metadata["finish_reason"],
                     index=0,
-                    message=ChatMessage(
+                    message=ChatMessage(  # Aqui deve ser ChatMessage, não ApiChatMessage
                         content=completion.content,
                         role=ChatRole.ASSISTANT,
                     ),
@@ -224,6 +231,77 @@ class ChatService:
                 ],
                 total_tokens=completion.response_metadata["token_usage"][
                     "total_tokens"
+                ],
+            ),
+        )
+
+        return chat_completion
+
+    def get_chat_completion_v2(self, messages: List[ApiChatMessage]) -> ChatResponse:
+        """
+        Obtém uma resposta de chat (conclusão) usando o modelo LLM.
+
+        Args:
+            messages (List[ApiChatMessage]): A lista de mensagens no formato da API.
+
+        Returns:
+            ChatResponse: A resposta do chat gerada pelo modelo LLM.
+        """
+
+        # Converte as mensagens da API (ApiChatMessage) para o modelo interno ChatMessage
+        chat_messages = [
+            ChatMessage(role=msg.role_name, content=msg.message_content)
+            for msg in messages
+        ]
+
+        # Agora, use o modelo ChatMessage para gerar a resposta
+        context = self._retrieve_search_context(chat_messages)
+        prompt = self._create_prompt(context)
+
+        chain = prompt | self._openai_client
+
+        history = []
+        completion = chain.invoke(
+            {"chat_history": history, "user_message": chat_messages[-1].content}
+        )
+
+        if self._message_history:
+            self._message_history.add_messages(
+                [
+                    HumanMessage(content=chat_messages[-1].content),
+                    AIMessage(content=completion.content),
+                ]
+            )
+
+        chat_completion = ChatCompletionResponse(
+            data=DataChatCompletionResponse(
+                details=ChatCompletionResponseCommon(
+                    created_date_time=int(time.time()),
+                    id_completion=completion.id,
+                    usage=ApiChatUsage(
+                        completion_token_count=completion.response_metadata[
+                            "token_usage"
+                        ]["completion_tokens"],
+                        prompt_token_count=completion.response_metadata["token_usage"][
+                            "prompt_tokens"
+                        ],
+                        total_token_count=completion.response_metadata["token_usage"][
+                            "total_tokens"
+                        ],
+                    ),
+                ),
+                choices=[
+                    ChatCompletionChoice(
+                        chat_completion_choice_common=ChatCompletionChoiceCommon(
+                            index_option=0,
+                            finish_reason=completion.response_metadata["finish_reason"],
+                        ),
+                        message=ApiChatMessage(
+                            role_name=ChatRole.ASSISTANT,
+                            message_content=completion.content,
+                            end_turn_indicator=True,
+                        ),
+                    ),
                 ],
             ),
         )

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 from fastapi import HTTPException
-from app.models.chat_models import ChatMessage, ChatRole
+from app.models.chat_models import ApiChatMessage, ChatRole
 from app.routers.chat_routers import validate_messages, validate_user_header
 
 
@@ -13,8 +13,8 @@ def test_validate_messages_with_valid_messages() -> None:
 
     # Arrange
     messages = [
-        ChatMessage(content="start", role=ChatRole.SYSTEM),
-        ChatMessage(content="Olá, como vai?", role=ChatRole.USER),
+        ApiChatMessage(content="start", role=ChatRole.SYSTEM),
+        ApiChatMessage(content="Olá, como vai?", role=ChatRole.USER),
     ]
 
     # Act + Assert
@@ -46,7 +46,7 @@ def test_validate_messages_with_empty_content() -> None:
     """
 
     # Arrange
-    messages = [ChatMessage(content="", role=ChatRole.USER)]
+    messages = [ApiChatMessage(content="", role=ChatRole.USER)]
 
     # Act
     with pytest.raises(HTTPException) as excp:
@@ -70,7 +70,7 @@ def test_validate_messages_with_empty_role() -> None:
 
     # Act + Assert
     with pytest.raises(ValidationError):
-        validate_messages([ChatMessage(**msg) for msg in messages])
+        validate_messages([ApiChatMessage(**msg) for msg in messages])
 
 
 def test_validate_messages_with_invalid_role() -> None:
@@ -83,7 +83,7 @@ def test_validate_messages_with_invalid_role() -> None:
 
     # Act + Assert
     with pytest.raises(ValidationError):
-        validate_messages([ChatMessage(**msg) for msg in messages])
+        validate_messages([ApiChatMessage(**msg) for msg in messages])
 
 
 def test_validate_user_header_with_valid_header() -> None:

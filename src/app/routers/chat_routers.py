@@ -5,11 +5,19 @@ Este módulo define roteadores FastAPI para interações e conclusões de chat.
 from typing import List
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse, Response
-from ..models.chat_models import ChatCompletionRequest, ChatCompletionResponse, ChatMessage, ChatRequest, ChatResponse, ChatRole
+from ..models.chat_models import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ApiChatMessage,
+    ChatRequest,
+    ChatResponse,
+    ChatRole,
+)
+
 from ..services.chat_services import ChatService
 
 
-def validate_messages(messages: List[ChatMessage]) -> None:
+def validate_messages(messages: List[ApiChatMessage]) -> None:
     """
     Valida uma lista de mensagens. Cada mensagem deve ter um 'content' e um 'role'.
     'role' deve ser 'system', 'user' ou 'assistant'.
@@ -106,92 +114,55 @@ async def create_chat_response(request: ChatRequest) -> Response:
     description="Este endpoint fornece uma conclusão de chat com base na solicitação de chat fornecida.",
     operation_id="create_chat_completion",
     response_description="A conclusão de chat gerada",
-    response_model=ChatResponse,
+    response_model=ChatCompletionResponse,
     summary="Obtém uma conclusão de chat.",
 )
-async def create_chat_completion(request: ChatRequest) -> Response:
+async def create_chat_completion(request: ChatCompletionRequest) -> JSONResponse:
     """
     Este endpoint fornece uma conclusão de chat com base na solicitação de chat fornecida.
-    Retorna a resposta como StreamingResponse ou JSONResponse,
-    com base no atributo stream da solicitação.
+    Retorna a resposta como StreamingResponse ou JSONResponse, dependendo da solicitação.
     """
 
-    validate_messages(request.messages)
-
-    # TODO: Alterar para serviços que usem Chains/Agents/Tools
-    chat_service = ChatService()
-    chat_response = chat_service.get_chat_completion(request.messages)
-
-    # TODO: Refatorar entrega de streaming (adequar o futuro front-end)
-    # Função geradora para a resposta como streaming
-    async def response_generator():
-        for choice in chat_response.choices:
-            yield " ".join(choice.message.content.split())
-
-    if request.stream:
-        return StreamingResponse(
-            response_generator(),
-            status_code=status.HTTP_200_OK,
-        )
-
-    return JSONResponse(
-        chat_response.dict(),
-        status_code=status.HTTP_200_OK,
-    )
-
-
-from fastapi import FastAPI, Request, HTTPException, Header
-from uuid import UUID
-from typing import Optional
-
-app = FastAPI()
-
-@app.post("/chat/completions", response_model=ChatCompletionResponse)
-async def create_chat_completion(
-    request: ChatCompletionRequest,
-    user_id: Optional[str] = Header(None)
-):
-    """
-    Este endpoint fornece uma conclusão de chat com base na solicitação de chat fornecida.
-    """
-    
-    # O backend agora extrai o 'user-id' diretamente da requisição
-    if user_id is None:
-        raise HTTPException(status_code=400, detail="O cabeçalho 'user-id' é obrigatório.")
-    
-    # Validação dos dados de mensagens
     messages = request.data.messages
     if not messages:
-        raise HTTPException(status_code=400, detail="A solicitação precisa conter mensagens.")
+        raise HTTPException(
+            status_code=400, detail="A solicitação precisa conter mensagens."
+        )
 
     # Processamento do serviço de completions
     chat_service = ChatService()
-    chat_response = chat_service.get_chat_completion(messages)
+    chat_response = chat_service.get_chat_completion_v2(messages)
 
-    # Resposta normal ou como streaming, dependendo da requisição
-    if request.data.params.streamIndicator:
-        return StreamingResponse(
-            chat_service.get_chat_streaming_response(),
-            status_code=200
-        )
-    else:
-        return ChatCompletionResponse(
-            data={
+    # Se não for streaming, monta a resposta formatada como JSON
+    return JSONResponse(
+        content={
+            "data": {
                 "details": {
-                    "id": chat_response.idCompletion,
-                    "object": "completion",
-                    "created": chat_response.createdDateTime,
-                    "finishReason": chat_response.finishReason,
+                    "idCompletion": chat_response.data.details.id_completion,
+                    "objectType": "completion",
+                    "createdDateTime": chat_response.data.details.created_date_time,
                     "usage": {
-                        "completion_tokens": chat_response.usage.completionTokenCount,
-                        "prompt_tokens": chat_response.usage.promptTokenCount,
-                        "total_tokens": chat_response.usage.totalTokenCount,
-                    }
+                        "completionTokenCount": chat_response.data.details.usage.completion_token_count,
+                        "promptTokenCount": chat_response.data.details.usage.prompt_token_count,
+                        "totalTokenCount": chat_response.data.details.usage.total_token_count,
+                    },
                 },
-                "message": {
-                    "role": chat_response.choices[0].message.roleName,
-                    "content": chat_response.choices[0].message.messageContent,
-                    "endTurn": True  # Ou ajustado conforme necessário
-                }
-            }
-        )
+                "choices": [
+                    {
+                        "chatCompletionChoiceCommon": {
+                            "indexOption": choice.chat_completion_choice_common.index_option,  # Acessando index_option corretamente
+                            "finishReason": choice.chat_completion_choice_common.finish_reason,  # Acessando finish_reason corretamente
+                        },
+                        "message": {
+                            "roleName": choice.message.role_name,  # Acessando role_name de ApiChatMessage
+                            "messageContent": choice.message.message_content,  # Acessando message_content de ApiChatMessage
+                            "endTurnIndicator": choice.message.end_turn_indicator
+                            or True,  # Acessando end_turn_indicator de ApiChatMessage
+                        },
+                    }
+                    for choice in chat_response.data.choices  # Acessando corretamente as choices dentro de data
+                ],
+            },
+        },
+        status_code=status.HTTP_200_OK,
+    )

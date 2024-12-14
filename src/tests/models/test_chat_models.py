@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from app.models.chat_models import ChatMessage
+from app.models.chat_models import ApiChatMessage
 
 
 def test_chat_message_with_empty_role() -> None:
@@ -13,7 +13,7 @@ def test_chat_message_with_empty_role() -> None:
 
     # Act and Assert
     with pytest.raises(ValidationError):
-        ChatMessage(**invalid_message)
+        ApiChatMessage(**invalid_message)
 
 
 def test_chat_message_with_invalid_role() -> None:
@@ -26,4 +26,4 @@ def test_chat_message_with_invalid_role() -> None:
 
     # Act and Assert
     with pytest.raises(ValidationError):
-        ChatMessage(**invalid_message)
+        ApiChatMessage(**invalid_message)
