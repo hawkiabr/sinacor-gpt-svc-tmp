@@ -1,22 +1,16 @@
 import os
+import logging
 import time
+
 from typing import List, Optional
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from dotenv import find_dotenv, load_dotenv
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain_community.vectorstores.azuresearch import AzureSearch
-from langchain_core.chat_history import (
-    BaseChatMessageHistory,
-    InMemoryChatMessageHistory,
-)
+
+from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompt_values import ChatPromptValue
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    MessagesPlaceholder,
-)
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from ..models.chat_models import (
     ChatChoice,
@@ -32,12 +26,11 @@ from ..models.chat_models import (
     ChatUsage,
     DataChatCompletionResponse,
 )
-from ..models.search_models import SearchStrategy
 
 
 class ChatService:
     """
-    Representa o serviço responsável por gerenciar as interações de chat.
+    Serviço responsável por gerenciar as interações de chat.
     Usa Chat Models para processar e responder às mensagens.
     """
 
@@ -65,7 +58,7 @@ class ChatService:
             - reinvestimento de tesouro direto.pdf#page=1
 
     Mantenha um tom impessoal, educado e profissional em todas as respostas, priorizando a clareza para auxiliar no atendimento ao chamado/ticket de suporte.
-"""
+    """
 
     def __init__(
         self,
@@ -73,6 +66,9 @@ class ChatService:
     ) -> None:
         """
         Inicializa o serviço de chat.
+
+        Args:
+            message_history (Optional[BaseChatMessageHistory]): Histórico de mensagens do chat.
         """
 
         load_dotenv(find_dotenv())
@@ -131,7 +127,7 @@ class ChatService:
         ]
 
         if not all(required_vars):
-            raise ValueError("One or more environment variables are not set.")
+            raise ValueError("Uma ou mais variáveis de ambiente não estão definidas.")
 
     def _init_clients(self) -> None:
         """
@@ -147,42 +143,59 @@ class ChatService:
         Inicializa o cliente do Azure AI Search.
         """
 
-        self._search_credential = AzureKeyCredential(self._azure_search_key)
-        self._search_client = SearchClient(
-            endpoint=self._azure_search_endpoint,
-            index_name=self._azure_search_index_name,
-            credential=self._search_credential,
-        )
+        try:
+            self._search_credential = AzureKeyCredential(self._azure_search_key)
+            self._search_client = SearchClient(
+                endpoint=self._azure_search_endpoint,
+                index_name=self._azure_search_index_name,
+                credential=self._search_credential,
+            )
+
+        except Exception as e:
+            logging.error("Erro ao inicializar o cliente Azure AI Search: %s", e)
+            raise
 
     def _init_openai_client(self) -> None:
         """
-        Inicializa o Azure OpenAI.
+        Inicializa o cliente do Azure OpenAI.
         """
 
-        self._openai_client = AzureChatOpenAI(
-            azure_endpoint=self._azure_openai_endpoint,
-            deployment_name=self._azure_openai_deployment_name,
-            model=self._azure_openai_model,
-            temperature=self._azure_openai_temperature,
-            api_version=self._azure_openai_api_version,
-            top_p=self._azure_openai_top_p,  # Incluindo top_p
-        )
+        try:
+            self._openai_client = AzureChatOpenAI(
+                azure_endpoint=self._azure_openai_endpoint,
+                deployment_name=self._azure_openai_deployment_name,
+                model=self._azure_openai_model,
+                temperature=self._azure_openai_temperature,
+                api_version=self._azure_openai_api_version,
+                top_p=self._azure_openai_top_p,
+            )
+
+        except Exception as e:
+            logging.error("Erro ao inicializar o cliente Azure OpenAI: %s", e)
+            raise
 
     def _init_openai_embeddings(self) -> None:
         """
-        Inicializa o Azure OpenAI Embeddings.
+        Inicializa o cliente do Azure OpenAI Embeddings.
         """
 
-        self._openai_embeddings = AzureOpenAIEmbeddings(
-            azure_deployment=self._azure_openai_embeddings_deployment_name,
-            openai_api_version=self._azure_openai_api_version,
-            azure_endpoint=self._azure_openai_endpoint,
-            api_key=self._azure_openai_api_key,
-        )
+        try:
+            self._openai_embeddings = AzureOpenAIEmbeddings(
+                azure_deployment=self._azure_openai_embeddings_deployment_name,
+                openai_api_version=self._azure_openai_api_version,
+                azure_endpoint=self._azure_openai_endpoint,
+                api_key=self._azure_openai_api_key,
+            )
+
+        except Exception as e:
+            logging.error(
+                "Erro ao inicializar o cliente Azure OpenAI Embeddings: %s", e
+            )
+            raise
 
     def get_chat_completion(self, messages: List[ChatMessage]) -> ChatResponse:
         """
-        Obtém uma resposta de chat (conclusão) usando modelo LLM.
+        Obtém uma resposta de chat (conclusão) usando o modelo LLM.
 
         Args:
             messages (List[ChatMessage]): A lista de mensagens do chat para gerar a conclusão.
@@ -191,51 +204,56 @@ class ChatService:
             ChatResponse: A resposta do chat gerada pelo modelo LLM.
         """
 
-        context = self._retrieve_search_context(messages)
-        prompt = self._create_prompt(context)
+        try:
+            context = self._retrieve_search_context(messages)
+            prompts = self._create_prompt(context)
 
-        chain = prompt | self._openai_client
+            chain = prompts | self._openai_client
 
-        history = []
-        completion = chain.invoke(
-            {"chat_history": history, "user_message": messages[-1].content}
-        )
-
-        if self._message_history:
-            self._message_history.add_messages(
-                [
-                    HumanMessage(content=messages[-1].content),
-                    AIMessage(content=completion.content),
-                ]
+            history = []
+            completion = chain.invoke(
+                {"chat_history": history, "user_message": messages[-1].content}
             )
 
-        chat_completion = ChatResponse(
-            choices=[
-                ChatChoice(
-                    finish_reason=completion.response_metadata["finish_reason"],
-                    index=0,
-                    message=ChatMessage(  # Aqui deve ser ChatMessage, não ApiChatMessage
-                        content=completion.content,
-                        role=ChatRole.ASSISTANT,
-                    ),
-                ),
-            ],
-            created=int(time.time()),
-            id=completion.id,
-            usage=ChatUsage(
-                completion_tokens=completion.response_metadata["token_usage"][
-                    "completion_tokens"
-                ],
-                prompt_tokens=completion.response_metadata["token_usage"][
-                    "prompt_tokens"
-                ],
-                total_tokens=completion.response_metadata["token_usage"][
-                    "total_tokens"
-                ],
-            ),
-        )
+            if self._message_history:
+                self._message_history.add_messages(
+                    [
+                        HumanMessage(content=messages[-1].content),
+                        AIMessage(content=completion.content),
+                    ]
+                )
 
-        return chat_completion
+            chat_completion = ChatResponse(
+                choices=[
+                    ChatChoice(
+                        finish_reason=completion.response_metadata["finish_reason"],
+                        index=0,
+                        message=ChatMessage(
+                            content=completion.content,
+                            role=ChatRole.ASSISTANT,
+                        ),
+                    ),
+                ],
+                created=int(time.time()),
+                id=completion.id,
+                usage=ChatUsage(
+                    completion_tokens=completion.response_metadata["token_usage"][
+                        "completion_tokens"
+                    ],
+                    prompt_tokens=completion.response_metadata["token_usage"][
+                        "prompt_tokens"
+                    ],
+                    total_tokens=completion.response_metadata["token_usage"][
+                        "total_tokens"
+                    ],
+                ),
+            )
+
+            return chat_completion
+
+        except Exception as e:
+            logging.error("Erro ao realizar a conclusão: %s", e)
+            raise
 
     def get_chat_completion_v2(self, messages: List[ApiChatMessage]) -> ChatResponse:
         """
@@ -248,70 +266,84 @@ class ChatService:
             ChatResponse: A resposta do chat gerada pelo modelo LLM.
         """
 
-        # Converte as mensagens da API (ApiChatMessage) para o modelo interno ChatMessage
-        chat_messages = [
-            ChatMessage(role=msg.role_name, content=msg.message_content)
-            for msg in messages
-        ]
+        try:
+            # Converte as mensagens da API (ApiChatMessage) para o modelo interno ChatMessage
+            chat_messages = [
+                ChatMessage(role=msg.role_name, content=msg.message_content)
+                for msg in messages
+            ]
 
-        # Agora, use o modelo ChatMessage para gerar a resposta
-        context = self._retrieve_search_context(chat_messages)
-        prompt = self._create_prompt(context)
+            # Agora, use o modelo ChatMessage para gerar a resposta
+            context = self._retrieve_search_context(chat_messages)
+            prompt = self._create_prompt(context)
 
-        chain = prompt | self._openai_client
+            chain = prompt | self._openai_client
 
-        history = []
-        completion = chain.invoke(
-            {"chat_history": history, "user_message": chat_messages[-1].content}
-        )
-
-        if self._message_history:
-            self._message_history.add_messages(
-                [
-                    HumanMessage(content=chat_messages[-1].content),
-                    AIMessage(content=completion.content),
-                ]
+            history = []
+            completion = chain.invoke(
+                {"chat_history": history, "user_message": chat_messages[-1].content}
             )
 
-        chat_completion = ChatCompletionResponse(
-            data=DataChatCompletionResponse(
-                details=ChatCompletionResponseCommon(
-                    created_date_time=int(time.time()),
-                    id_completion=completion.id,
-                    usage=ApiChatUsage(
-                        completion_token_count=completion.response_metadata[
-                            "token_usage"
-                        ]["completion_tokens"],
-                        prompt_token_count=completion.response_metadata["token_usage"][
-                            "prompt_tokens"
-                        ],
-                        total_token_count=completion.response_metadata["token_usage"][
-                            "total_tokens"
-                        ],
-                    ),
-                ),
-                choices=[
-                    ChatCompletionChoice(
-                        chat_completion_choice_common=ChatCompletionChoiceCommon(
-                            index_option=0,
-                            finish_reason=completion.response_metadata["finish_reason"],
-                        ),
-                        message=ApiChatMessage(
-                            role_name=ChatRole.ASSISTANT,
-                            message_content=completion.content,
-                            end_turn_indicator=True,
-                        ),
-                    ),
-                ],
-            ),
-        )
+            if self._message_history:
+                self._message_history.add_messages(
+                    [
+                        HumanMessage(content=chat_messages[-1].content),
+                        AIMessage(content=completion.content),
+                    ]
+                )
 
-        return chat_completion
+            chat_completion = ChatCompletionResponse(
+                data=DataChatCompletionResponse(
+                    details=ChatCompletionResponseCommon(
+                        created_date_time=int(time.time()),
+                        id_completion=completion.id,
+                        usage=ApiChatUsage(
+                            completion_token_count=completion.response_metadata[
+                                "token_usage"
+                            ]["completion_tokens"],
+                            prompt_token_count=completion.response_metadata[
+                                "token_usage"
+                            ]["prompt_tokens"],
+                            total_token_count=completion.response_metadata[
+                                "token_usage"
+                            ]["total_tokens"],
+                        ),
+                    ),
+                    choices=[
+                        ChatCompletionChoice(
+                            chat_completion_choice_common=ChatCompletionChoiceCommon(
+                                index_option=0,
+                                finish_reason=completion.response_metadata[
+                                    "finish_reason"
+                                ],
+                            ),
+                            message=ApiChatMessage(
+                                role_name=ChatRole.ASSISTANT,
+                                message_content=completion.content,
+                                end_turn_indicator=True,
+                            ),
+                        ),
+                    ],
+                ),
+            )
+
+            return chat_completion
+
+        except Exception as e:
+            logging.error("Erro ao realizar a conclusão: %s", e)
+            raise
 
     def _retrieve_search_context(self, messages: List[ChatMessage]) -> str:
         """
         Busca o conteúdo apropriado do armazenamento e inclui referências.
+
+        Args:
+            messages (List[ChatMessage]): A lista de mensagens para buscar contexto relevante.
+
+        Returns:
+            str: O contexto de busca que será utilizado para gerar a resposta.
         """
+
         search_context = ""
         references = []
 

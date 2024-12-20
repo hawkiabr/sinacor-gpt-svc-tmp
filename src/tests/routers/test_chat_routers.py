@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 from fastapi import HTTPException
-from app.models.chat_models import ApiChatMessage, ChatRole
-from app.routers.chat_routers import validate_messages, validate_user_header
+from app.models.chat_models import ApiChatMessage, ChatMessage, ChatRole
+from app.routers.chat_routers import _validate_messages, _validate_user_header
 
 
 def test_validate_messages_with_valid_messages() -> None:
@@ -13,12 +13,12 @@ def test_validate_messages_with_valid_messages() -> None:
 
     # Arrange
     messages = [
-        ApiChatMessage(content="start", role=ChatRole.SYSTEM),
-        ApiChatMessage(content="Olá, como vai?", role=ChatRole.USER),
+        ApiChatMessage(messageContent="start", role=ChatRole.SYSTEM),
+        ApiChatMessage(messageContent="Olá, como vai?", role=ChatRole.USER),
     ]
 
     # Act + Assert
-    validate_messages(messages)  # Não deve lançar exceção
+    _validate_messages(messages)  # Não deve lançar exceção
 
 
 def test_validate_messages_with_empty_list() -> None:
@@ -32,7 +32,7 @@ def test_validate_messages_with_empty_list() -> None:
 
     # Act
     with pytest.raises(HTTPException) as excp:
-        validate_messages(messages)
+        _validate_messages(messages)
 
     # Assert
     assert excp.value.status_code == 400
@@ -46,11 +46,11 @@ def test_validate_messages_with_empty_content() -> None:
     """
 
     # Arrange
-    messages = [ApiChatMessage(content="", role=ChatRole.USER)]
+    messages = [ChatMessage(content="", role=ChatRole.USER)]
 
     # Act
     with pytest.raises(HTTPException) as excp:
-        validate_messages(messages)
+        _validate_messages(messages)
 
     # Assert
     assert excp.value.status_code == 400
@@ -70,7 +70,7 @@ def test_validate_messages_with_empty_role() -> None:
 
     # Act + Assert
     with pytest.raises(ValidationError):
-        validate_messages([ApiChatMessage(**msg) for msg in messages])
+        _validate_messages([ApiChatMessage(**msg) for msg in messages])
 
 
 def test_validate_messages_with_invalid_role() -> None:
@@ -83,7 +83,7 @@ def test_validate_messages_with_invalid_role() -> None:
 
     # Act + Assert
     with pytest.raises(ValidationError):
-        validate_messages([ApiChatMessage(**msg) for msg in messages])
+        _validate_messages([ApiChatMessage(**msg) for msg in messages])
 
 
 def test_validate_user_header_with_valid_header() -> None:
@@ -96,7 +96,7 @@ def test_validate_user_header_with_valid_header() -> None:
     user_id = "12345"
 
     # Act + Assert
-    assert validate_user_header(user_id) == user_id  # Não deve lançar exceção
+    assert _validate_user_header(user_id) == user_id  # Não deve lançar exceção
 
 
 def test_validate_user_header_with_no_header() -> None:
@@ -110,8 +110,8 @@ def test_validate_user_header_with_no_header() -> None:
 
     # Act
     with pytest.raises(HTTPException) as excp:
-        validate_user_header(user_id)
+        _validate_user_header(user_id)
 
     # Assert
     assert excp.value.status_code == 400
-    assert excp.value.detail == "O header user-id é obrigatório."
+    assert excp.value.detail == "O cabeçalho 'user-id' é obrigatório."
