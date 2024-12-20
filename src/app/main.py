@@ -1,13 +1,30 @@
-"""
-Módulo para criar e configurar uma aplicação FastAPI.
-Este módulo define a aplicação FastAPI, inclui os roteadores necessários e cria o esquema OpenAPI.
-"""
-
+import os
+from logging import INFO, getLogger, StreamHandler, Formatter
 from typing import Any, Dict
+
+from azure.monitor.opentelemetry import configure_azure_monitor
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.trace import get_tracer, get_tracer_provider
+
 from .routers import chat_routers, embedding_routers, health_routers
+
+
+def configure_open_telemetry():
+    """
+    Configura OpenTelemetry e Azure Monitor.
+    """
+
+    connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    if connection_string:
+        configure_azure_monitor()
+        logger.info("Azure Monitor configurado com sucesso.")
+    else:
+        logger.warning(
+            "Application Insights Connection String não encontrado. Monitoramento não configurado."
+        )
 
 
 def create_app():
@@ -15,11 +32,12 @@ def create_app():
     Cria e configura a aplicação FastAPI.
     """
 
-    app = FastAPI()  # FastAPI app
+    app = FastAPI()
     app.include_router(chat_routers.ChatRouter, prefix="/api", tags=["chat"])
     app.include_router(
         embedding_routers.EmbeddingRouter, prefix="/api", tags=["embeddings"]
     )
+
     app.include_router(health_routers.HealthRouter, tags=["health"])
     app.openapi = lambda: create_openapi(app)
     return app
@@ -67,5 +85,26 @@ def create_openapi(app: FastAPI) -> Dict[str, Any]:
     return app.openapi_schema
 
 
+# Carrega variáveis de ambiente
 load_dotenv(find_dotenv())
+
+# Configuração de tracer
+tracer = get_tracer(__name__, tracer_provider=get_tracer_provider())
+
+# Logger configurado com handler para log de console
+logger = getLogger(__name__)
+logger.setLevel(INFO)
+
+handler = StreamHandler()
+handler.setFormatter(Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+
+logger.addHandler(handler)
+
+# Criação da aplicação FastAPI
 fastapi_app = create_app()
+
+# Instrumentação do FastAPI para OpenTelemetry
+FastAPIInstrumentor.instrument_app(fastapi_app)
+
+# Configuração de OpenTelemetry
+configure_open_telemetry()

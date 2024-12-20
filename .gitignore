@@ -133,3 +133,7 @@ __blobstorage__
 __queuestorage__
 __azurite_db*__.json
 .python_packages
+
+# Project
+1.0.0-rc1_chat-services_Externa_Ingles_snc_proposta.yaml
+policy.xml
